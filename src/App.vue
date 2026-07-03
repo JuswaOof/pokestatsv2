@@ -1,5 +1,7 @@
 <script setup>
-  import { ref, onMounted } from 'vue'
+  import { ref, onMounted } from 'vue';
+
+  import PokemonCard from './components/PokemonCard.vue';
 
   const pokemon = ref([]);
   const loading = ref(false);
@@ -10,7 +12,7 @@
     error.value = '';
 
     try {
-      const response = await fetch('https://pokeapi.co/api/v2/pokemon?limit=20&offset=0')
+      const response = await fetch('https://pokeapi.co/api/v2/pokemon?limit=50&offset=0')
 
       if (!response.ok) {
         throw new Error('Failed to fetch Pokemon data');
@@ -34,14 +36,14 @@
 </script>
 
 <template>
-  <main class="min-h-screen bg-slate-100">
+  <main class="min-h-screen">
     <div class="flex flex-col items-center">
-      <h1 class="text-3xl font-bold text-slate-900">Pokédex</h1>
+      <h1 class="text-3xl font-bold">Pokédex</h1>
 
+      <h2 class="text-lg font-semibold">Pokemon list</h2>
       <div>
-        <h2 class="text-lg font-semibold text-slate-900">Pokemon list</h2>
 
-        <p v-if="loading" class="mt-4 text-slate-600">
+        <p v-if="loading" class="mt-4">
           Loading Pokemon...
         </p>
 
@@ -49,8 +51,12 @@
           {{ error }}
         </p>
 
-        <div v-else>
-          <pre>{{pokemon}}</pre>
+        <div v-else class="grid grid-cols-5 gap-4">
+            <PokemonCard
+              v-for="(item, index) in pokemon"
+              :key="index"
+              :pokemon="item"
+            />
         </div>
 
       </div>
