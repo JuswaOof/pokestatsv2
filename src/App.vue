@@ -1,11 +1,36 @@
 <script setup>
   import { ref, onMounted } from 'vue';
-
   import PokemonCard from './components/PokemonCard.vue';
 
   const pokemon = ref([]);
   const loading = ref(false);
   const error = ref('');
+
+  const fetchPokemonDetails = async (pokemonList) => {
+    const detailPromises = pokemonList.map(async (item) => {
+      const response = await fetch(item.url);
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch details for ${item.name}`);
+      }
+
+      const data = await response.json();
+
+      return {
+        id: data.id,
+        name: data.name,
+        image:
+          data.sprites.other.home.front_default
+          ? data.sprites.other.home.front_default
+          : data.sprites.other.dream_world.front_default
+          ? data.sprites.other.dream_world.front_default
+          : data.sprites.front_default,
+        types: data.types.map((typeInfo) => typeInfo.type.name),
+      }
+    });
+
+    return Promise.all(detailPromises);
+  }
 
   const fetchPokemon = async () => {
     loading.value = true;
@@ -20,9 +45,9 @@
 
       const data = await response.json();
 
-      pokemon.value = data.results;
+      pokemon.value = await fetchPokemonDetails(data.results);
 
-      console.log('Pokemon API response:', data);
+      console.log('Pokemon cards:', pokemon.value)
     } catch (err) {
       error.value = err.message || 'Something went wrong';
     } finally {
