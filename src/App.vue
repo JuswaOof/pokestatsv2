@@ -1,5 +1,5 @@
 <script setup>
-  import { ref, onMounted } from 'vue';
+  import { ref, onMounted, nextTick, onBeforeUnmount  } from 'vue';
   import PokemonCard from './components/PokemonCard.vue';
 
   const pokemon = ref([]);
@@ -7,6 +7,10 @@
   const loadingMore = ref(false);
   const error = ref('');
   const nextPageUrl = ref('https://pokeapi.co/api/v2/pokemon?limit=20&offset=0');
+
+  //infinite scrolling
+  const loadMoreTrigger = ref(null)
+  let observer = null
 
   const fetchPokemonDetails = async (pokemonList) => {
     const detailPromises = pokemonList.map(async (item) => {
@@ -35,7 +39,7 @@
   }
 
   const fetchPokemonPage = async () => {
-    if (!nextPageUrl.value) return
+    if (!nextPageUrl.value || loadingMore.value || loading.value) return
 
     const isInitialLoad = pokemon.value.length === 0
 
@@ -67,8 +71,41 @@
     }
   }
 
-  onMounted(() => {
-    fetchPokemonPage();
+  const setupObserver = () => {
+      if (!loadMoreTrigger.value) return
+
+      observer = new IntersectionObserver(
+        (entries) => {
+          const entry = entries[0]
+
+          if (
+            entry.isIntersecting &&
+            nextPageUrl.value &&
+            !loading.value &&
+            !loadingMore.value
+          ) {
+            fetchPokemonPage();
+          }
+        },
+        {
+          root: null,
+          threshold: 0.1,
+        }
+      );
+
+      observer.observe(loadMoreTrigger.value);
+  }
+
+  onMounted(async () => {
+    await fetchPokemonPage();
+    await nextTick();
+    setupObserver();
+  })
+
+  onBeforeUnmount(() => {
+    if (observer) {
+      observer.disconnect();
+    }
   })
 </script>
 
@@ -96,19 +133,16 @@
         </div>
 
         <div class="my-8 flex justify-center">
-          <button
-            v-if="nextPageUrl"
-            @click="fetchPokemonPage"
-            :disabled="loadingMore"
-            class="rounded-lg bg-blue-900 px-4 py-2 text-white disabled:cursor-not-allowed cursor-pointer disabled:opacity-50"
-          >
-            {{ loadingMore ? 'Loading more...' : 'Load more Pokemon' }}
-          </button>
+          <p v-if="loadingMore" class="mt-8 text-center text-slate-500">
+            Loading more Pokémon...
+          </p>
 
-          <p v-else class="text-slate-500">
+          <p v-else-if="!nextPageUrl" class="text-slate-500">
             This is the end.
           </p>
         </div>
+        <!-- observer -->
+        <div ref="loadMoreTrigger" class="h-10"></div>
       </template>
     </div>
   </main>
